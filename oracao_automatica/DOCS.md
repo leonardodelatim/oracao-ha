@@ -84,4 +84,4 @@ automation:
 - **O QR Code apareceu de novo**: o aparelho foi desconectado no celular. Leia o QR Code outra vez.
 - **Um grupo não recebe**: confira se você ainda está no grupo. Se só administradores podem enviar mensagens nele, você precisa ser admin.
 - **Uma pessoa não recebe**: confira o número. Ele precisa ter o DDD e o 9 na frente.
-- **Ver o que aconteceu**: abra a aba **Registro** do add-on.
+- **Ver o que aconteceu**: abra a aba **Registro** do app.
