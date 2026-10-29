@@ -1,0 +1,28 @@
+configuration:
+  api_id:
+    name: Telegram api_id
+    description: Number from my.telegram.org > API development tools.
+  api_hash:
+    name: Telegram api_hash
+    description: Hash from the same page as api_id.
+  horario_inicio:
+    name: Send from
+    description: HH:MM. Audios arriving earlier are ignored.
+  horario_fim:
+    name: Send until
+    description: HH:MM. Audios arriving later are ignored.
+  apenas_um_por_dia:
+    name: Only one prayer per day
+    description: Send only the first audio of each day.
+  intervalo_min_segundos:
+    name: Minimum pause between sends (seconds)
+    description: Larger pauses lower the risk of a WhatsApp ban.
+  intervalo_max_segundos:
+    name: Maximum pause between sends (seconds)
+    description: The actual pause is random between min and max.
+  legenda:
+    name: Message after the audio
+    description: Optional text sent right after the audio.
+  servico_notificacao:
+    name: Notification service
+    description: Optional, e.g. notify.mobile_app_my_phone.

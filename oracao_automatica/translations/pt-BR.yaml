@@ -1,0 +1,28 @@
+configuration:
+  api_id:
+    name: Telegram api_id
+    description: Número obtido em my.telegram.org > API development tools.
+  api_hash:
+    name: Telegram api_hash
+    description: Texto obtido no mesmo lugar do api_id.
+  horario_inicio:
+    name: Enviar a partir de
+    description: Formato HH:MM. Áudios que chegarem antes disso são ignorados.
+  horario_fim:
+    name: Enviar até
+    description: Formato HH:MM. Áudios que chegarem depois disso são ignorados.
+  apenas_um_por_dia:
+    name: Apenas uma oração por dia
+    description: Envia só o primeiro áudio do dia.
+  intervalo_min_segundos:
+    name: Pausa mínima entre envios (segundos)
+    description: Quanto maior, menor o risco de bloqueio no WhatsApp.
+  intervalo_max_segundos:
+    name: Pausa máxima entre envios (segundos)
+    description: A pausa real é sorteada entre o mínimo e o máximo.
+  legenda:
+    name: Mensagem depois do áudio
+    description: Texto opcional enviado logo após o áudio, por exemplo "Bom dia! 🙏".
+  servico_notificacao:
+    name: Serviço de notificação
+    description: Opcional. Ex. notify.mobile_app_meu_celular — avisa quando enviar ou se der problema.
