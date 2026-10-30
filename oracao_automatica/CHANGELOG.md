@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.1
+- Ajusta os textos padrão de sexta-feira e sábado.
+
 ## 1.1.0
 - Mensagem do dia: um texto diferente para cada dia da semana, enviado antes do áudio.
 - O áudio agora vai como nota de voz (convertido para o formato do WhatsApp).

@@ -51,8 +51,8 @@ const MENSAGENS_PADRAO = {
   terca: 'Bom dia, uma terça-feira abençoada para todos nós! 🙏',
   quarta: 'Bom dia, uma quarta-feira abençoada para todos nós! 🙏',
   quinta: 'Bom dia, uma quinta-feira abençoada para todos nós! 🙏',
-  sexta: 'Bom dia, uma sexta-feira abençoada e um ótimo fim de semana para todos nós! 🙏',
-  sabado: 'Bom dia, um sábado abençoado para todos nós! 🙏',
+  sexta: 'Bom dia, uma sexta-feira abençoada para todos nós! 🙏',
+  sabado: 'Bom dia, um Sábado e um final de semana abençoado para todos nós! 🙏',
   domingo: 'Bom dia, um domingo abençoado para todos nós! 🙏',
 };
 
