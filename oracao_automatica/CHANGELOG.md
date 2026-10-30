@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.0
+
+- Atualiza a biblioteca do WhatsApp (Baileys) para a versão 7, com suporte ao novo formato de contatos "LID". Corrige contatos que ficavam em "Aguardando mensagem" mesmo após reenvio.
+- Faz uma cópia de segurança da sessão do WhatsApp antes da primeira conexão com a nova versão.
+- A nota de voz já sai com forma de onda direto no envio.
+
 ## 1.2.4
 
 - Corrige mensagens presas em "Aguardando mensagem": o add-on guarda as mensagens enviadas nos últimos 3 dias e as reenvia quando o celular de quem recebe pede.

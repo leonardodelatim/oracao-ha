@@ -5,11 +5,28 @@ const path = require('path');
 const { spawn } = require('child_process');
 const pino = require('pino');
 const QRCode = require('qrcode');
-const baileys = require('@whiskeysockets/baileys');
 const { PASTA_SESSAO_WA, log, esperar, aleatorio } = require('./util');
 
-const makeWASocket = baileys.makeWASocket || baileys.default;
-const { useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, BufferJSON, proto } = baileys;
+// A Baileys 7 (com suporte ao novo formato de contatos "LID" do WhatsApp) é um módulo ES,
+// então é carregada com import() na primeira conexão.
+let makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, BufferJSON, proto;
+async function carregarBaileys() {
+  if (makeWASocket) return;
+  const b = await import('baileys');
+  makeWASocket = b.makeWASocket || b.default;
+  ({ useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, BufferJSON, proto } = b);
+}
+
+// Antes da primeira conexão com a Baileys 7, guarda uma cópia da sessão antiga.
+function backupSessaoV6() {
+  const destino = `${PASTA_SESSAO_WA}-backup-v6`;
+  try {
+    if (fs.existsSync(PASTA_SESSAO_WA) && !fs.existsSync(destino)) {
+      fs.cpSync(PASTA_SESSAO_WA, destino, { recursive: true });
+      log('Cópia de segurança da sessão do WhatsApp criada.');
+    }
+  } catch (err) { log('Não consegui copiar a sessão do WhatsApp:', err.message); }
+}
 
 // ---- Mensagens enviadas (para atender pedidos de reenvio) ----
 // Quando o celular de quem recebe não consegue decifrar uma mensagem ("Aguardando mensagem"),
@@ -72,6 +89,8 @@ function completarNotaDeVoz(msg) {
 }
 
 async function iniciar(callbacks = {}) {
+  await carregarBaileys();
+  backupSessaoV6();
   if (callbacks.aoConectar) aoConectar = callbacks.aoConectar;
   if (callbacks.aoDesconectar) aoDesconectar = callbacks.aoDesconectar;
   const minha = ++geracao;
@@ -304,6 +323,7 @@ async function enviarAudio(audio, destinos, { intervalo = { min: 20, max: 60 }, 
         mimetype: nota.mimetype,
         ptt: nota.ptt,
         ...(notaAtual?.seconds ? { seconds: notaAtual.seconds } : {}),
+        ...(notaAtual?.waveform ? { waveform: notaAtual.waveform } : {}),
       });
       audioOk = true;
       await s.sendPresenceUpdate('paused', jid).catch(() => {});
