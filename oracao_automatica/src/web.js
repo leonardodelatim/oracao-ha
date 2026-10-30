@@ -161,6 +161,7 @@ function secaoStatus() {
 <div class="acoes">
 <form class="inline" method="post" action="acao/teste"><button ${desabTeste}>Testar (só para mim)</button></form>
 <form class="inline" method="post" action="acao/reenviar" onsubmit="return confirm('Enviar o último áudio para TODOS os destinos agora?')"><button class="sec" ${desab}>Enviar para todos agora</button></form>
+${(e.historico || []).slice(-1)[0]?.falhas?.length ? `<form class="inline" method="post" action="acao/reenviar-falhas" onsubmit="return confirm('Reenviar o último áudio só para quem não recebeu?')"><button class="sec" ${desab}>Reenviar para quem falhou (${(e.historico || []).slice(-1)[0].falhas.length})</button></form>` : ''}
 ${!hoje && pronto ? `<form class="inline" method="post" action="acao/marcar-hoje"><button class="sec">Já enviei hoje à mão</button></form>` : ''}
 </div>
 ${hist ? `<h2 style="margin-top:16px">Últimos envios</h2><table>${hist}</table>` : ''}</div>`;
@@ -287,11 +288,13 @@ async function rotear(req, res) {
     case 'POST /acao/teste':
     case 'POST /api/teste':
     case 'POST /acao/reenviar':
-    case 'POST /api/reenviar': {
-      const modo = rota.endsWith('teste') ? 'teste' : 'todos';
+    case 'POST /api/reenviar':
+    case 'POST /acao/reenviar-falhas':
+    case 'POST /api/reenviar-falhas': {
+      const modo = rota.endsWith('teste') ? 'teste' : rota.endsWith('falhas') ? 'falhas' : 'todos';
       try {
         await app.enviarUltimo(modo);
-        const m = modo === 'teste' ? 'Teste iniciado: o áudio vai chegar no seu número em instantes.' : 'Envio para todos iniciado.';
+        const m = modo === 'teste' ? 'Teste iniciado: o áudio vai chegar no seu número em instantes.' : modo === 'falhas' ? 'Reenvio iniciado para quem não recebeu.' : 'Envio para todos iniciado.';
         return rota.includes('/api/') ? json(res, { ok: true, mensagem: m }) : voltar(req, res, m);
       } catch (err) {
         return rota.includes('/api/') ? json(res, { ok: false, erro: err.message }, 400) : voltar(req, res, err.message);

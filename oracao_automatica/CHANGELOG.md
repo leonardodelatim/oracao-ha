@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.3
+
+- A conversão do áudio não trava mais o add-on (antes derrubava a conexão do WhatsApp no primeiro envio).
+- Se um envio falhar, tenta de novo automaticamente, sem repetir o que já chegou.
+- Novo botão "Reenviar para quem falhou" no painel.
+
 ## 1.2.2
 
 - Corrige áudio que não abria no iPhone: a nota de voz agora vai com forma de onda e duração, que o WhatsApp do iPhone exige.

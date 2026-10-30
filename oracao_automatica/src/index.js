@@ -67,6 +67,13 @@ const app = {
       if (!jid) throw new Error('Cadastre o seu número em Destinos para usar o teste.');
       destinos = [{ nome: 'Meu número (teste)', id: jid }];
     }
+    if (modo === 'falhas') {
+      const e = util.carregarEstado();
+      const ultimo = e.historico?.[e.historico.length - 1];
+      const nomes = new Set(ultimo?.falhas || []);
+      destinos = destinos.filter((d) => nomes.has(d.nome));
+      if (!destinos.length) throw new Error('O último envio não teve falhas.');
+    }
     if (!destinos.length) throw new Error('Nenhum destino cadastrado.');
     const msg = await tg.buscarUltimoAudio(chatAtual.entidade);
     if (!msg) throw new Error('Não encontrei nenhum áudio recente no chat.');
