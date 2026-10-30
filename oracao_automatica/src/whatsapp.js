@@ -9,7 +9,49 @@ const baileys = require('@whiskeysockets/baileys');
 const { PASTA_SESSAO_WA, log, esperar, aleatorio } = require('./util');
 
 const makeWASocket = baileys.makeWASocket || baileys.default;
-const { useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = baileys;
+const { useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, BufferJSON, proto } = baileys;
+
+// ---- Mensagens enviadas (para atender pedidos de reenvio) ----
+// Quando o celular de quem recebe não consegue decifrar uma mensagem ("Aguardando mensagem"),
+// ele pede ao remetente que mande de novo. Para isso a mensagem precisa estar guardada aqui.
+const ARQ_ENVIADAS = path.join(process.env.DADOS_DIR || '/data', 'mensagens-enviadas.json');
+const GUARDAR_DIAS = 3;
+let enviadas = {};
+try { enviadas = JSON.parse(fs.readFileSync(ARQ_ENVIADAS, 'utf8')); } catch { enviadas = {}; }
+let gravarPendente = null;
+
+function guardarEnviada(m) {
+  if (!m?.key?.id || !m.message) return;
+  enviadas[m.key.id] = { t: Date.now(), m: JSON.stringify(m.message, BufferJSON.replacer) };
+  const limite = Date.now() - GUARDAR_DIAS * 86400000;
+  for (const [id, v] of Object.entries(enviadas)) if (v.t < limite) delete enviadas[id];
+  clearTimeout(gravarPendente);
+  gravarPendente = setTimeout(() => {
+    try { fs.writeFileSync(ARQ_ENVIADAS, JSON.stringify(enviadas)); } catch { /* ignora */ }
+  }, 1000);
+}
+
+async function obterEnviada(key) {
+  const v = enviadas[key?.id];
+  if (!v) return undefined;
+  try {
+    log(`Reenviando mensagem a pedido de um aparelho que não conseguiu abri-la (${key.remoteJid?.split('@')[0] || '?'}).`);
+    return proto.Message.fromObject(JSON.parse(v.m, BufferJSON.reviver));
+  } catch { return undefined; }
+}
+
+// Contador de tentativas de reenvio exigido pela Baileys.
+const contadorReenvio = (() => {
+  const m = new Map();
+  return { get: (k) => m.get(k), set: (k, v) => { m.set(k, v); }, del: (k) => { m.delete(k); }, flushAll: () => m.clear() };
+})();
+
+// Envia e guarda a mensagem para eventuais pedidos de reenvio.
+async function enviarGuardando(s, jid, conteudo) {
+  const m = await s.sendMessage(jid, conteudo);
+  guardarEnviada(m);
+  return m;
+}
 
 const status = { conectado: false, qrSvg: null, numero: null, erro: null };
 let sock = null;
@@ -47,6 +89,8 @@ async function iniciar(callbacks = {}) {
     markOnlineOnConnect: false,
     syncFullHistory: false,
     patchMessageBeforeSending: (msg) => completarNotaDeVoz(msg),
+    getMessage: obterEnviada,
+    msgRetryCounterCache: contadorReenvio,
   });
   const meu = sock;
   meu.ev.on('creds.update', saveCreds);
@@ -248,14 +292,14 @@ async function enviarAudio(audio, destinos, { intervalo = { min: 20, max: 60 }, 
       if (mensagem && !textoOk) {
         await s.sendPresenceUpdate('composing', jid).catch(() => {});
         await esperar(aleatorio(1500, 3500));
-        await s.sendMessage(jid, { text: mensagem });
+        await enviarGuardando(s, jid, { text: mensagem });
         textoOk = true;
         await esperar(aleatorio(1000, 2500));
       }
       if (!audioOk) {
       await s.sendPresenceUpdate('recording', jid).catch(() => {});
       await esperar(aleatorio(2000, 5000));
-      await s.sendMessage(jid, {
+      await enviarGuardando(s, jid, {
         audio: nota.buffer,
         mimetype: nota.mimetype,
         ptt: nota.ptt,
@@ -264,7 +308,7 @@ async function enviarAudio(audio, destinos, { intervalo = { min: 20, max: 60 }, 
       audioOk = true;
       await s.sendPresenceUpdate('paused', jid).catch(() => {});
       }
-      if (legenda) await s.sendMessage(jid, { text: legenda });
+      if (legenda) await enviarGuardando(s, jid, { text: legenda });
       log(`  ✔ ${d.nome}${tentativa > 1 ? ' (na 2ª tentativa)' : ''}`);
       resultado.ok.push(d.nome);
       erro = null;
@@ -291,7 +335,7 @@ async function enviarAudio(audio, destinos, { intervalo = { min: 20, max: 60 }, 
 async function enviarTexto(id, texto) {
   const s = await aguardarConexao(30);
   const jid = await resolverJid(s, id);
-  await s.sendMessage(jid, { text: texto });
+  await enviarGuardando(s, jid, { text: texto });
 }
 
 function encerrar() {

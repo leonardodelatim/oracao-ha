@@ -57,7 +57,7 @@ const app = {
     atualizarSensor();
   },
   // modo: 'teste' (só o meu número) | 'todos' (reenviar para todos)
-  async enviarUltimo(modo) {
+  async enviarUltimo(modo, escolhidos = []) {
     if (!tg.conectado() || !chatAtual) throw new Error('Telegram ou chat ainda não configurados.');
     if (!wa.status.conectado) throw new Error('WhatsApp não está conectado.');
     const cfg = util.carregarConfig();
@@ -66,6 +66,11 @@ const app = {
       const jid = util.numeroParaJid(cfg.whatsapp.meuNumero);
       if (!jid) throw new Error('Cadastre o seu número em Destinos para usar o teste.');
       destinos = [{ nome: 'Meu número (teste)', id: jid }];
+    }
+    if (modo === 'escolhidos') {
+      const ids = new Set(escolhidos);
+      destinos = destinos.filter((d) => ids.has(d.id));
+      if (!destinos.length) throw new Error('Marque pelo menos um destino.');
     }
     if (modo === 'falhas') {
       const e = util.carregarEstado();

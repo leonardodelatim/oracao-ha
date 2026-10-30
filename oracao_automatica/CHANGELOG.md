@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.4
+
+- Corrige mensagens presas em "Aguardando mensagem": o add-on guarda as mensagens enviadas nos últimos 3 dias e as reenvia quando o celular de quem recebe pede.
+- Novo "Reenviar para destinos escolhidos" no painel.
+
 ## 1.2.3
 
 - A conversão do áudio não trava mais o add-on (antes derrubava a conexão do WhatsApp no primeiro envio).

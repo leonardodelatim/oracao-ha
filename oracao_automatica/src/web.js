@@ -162,6 +162,10 @@ function secaoStatus() {
 <form class="inline" method="post" action="acao/teste"><button ${desabTeste}>Testar (só para mim)</button></form>
 <form class="inline" method="post" action="acao/reenviar" onsubmit="return confirm('Enviar o último áudio para TODOS os destinos agora?')"><button class="sec" ${desab}>Enviar para todos agora</button></form>
 ${(e.historico || []).slice(-1)[0]?.falhas?.length ? `<form class="inline" method="post" action="acao/reenviar-falhas" onsubmit="return confirm('Reenviar o último áudio só para quem não recebeu?')"><button class="sec" ${desab}>Reenviar para quem falhou (${(e.historico || []).slice(-1)[0].falhas.length})</button></form>` : ''}
+<details style="margin-top:10px"><summary>Reenviar para destinos escolhidos</summary>
+<form method="post" action="acao/reenviar-escolhidos" onsubmit="return confirm('Reenviar o último áudio para os destinos marcados?')">
+${app.config().whatsapp.destinos.map((d) => `<label class="item"><input type="checkbox" name="destino" value="${esc(d.id)}"><span>${esc(d.nome)}</span></label>`).join('')}
+<button class="sec" ${desab}>Reenviar para os marcados</button></form></details>
 ${!hoje && pronto ? `<form class="inline" method="post" action="acao/marcar-hoje"><button class="sec">Já enviei hoje à mão</button></form>` : ''}
 </div>
 ${hist ? `<h2 style="margin-top:16px">Últimos envios</h2><table>${hist}</table>` : ''}</div>`;
@@ -298,6 +302,15 @@ async function rotear(req, res) {
         return rota.includes('/api/') ? json(res, { ok: true, mensagem: m }) : voltar(req, res, m);
       } catch (err) {
         return rota.includes('/api/') ? json(res, { ok: false, erro: err.message }, 400) : voltar(req, res, err.message);
+      }
+    }
+    case 'POST /acao/reenviar-escolhidos': {
+      try {
+        const ids = corpo.getAll('destino');
+        await app.enviarUltimo('escolhidos', ids);
+        return voltar(req, res, `Reenvio iniciado para ${ids.length} destino(s).`);
+      } catch (err) {
+        return voltar(req, res, err.message);
       }
     }
     case 'POST /acao/marcar-hoje':
