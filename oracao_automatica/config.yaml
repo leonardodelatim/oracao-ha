@@ -1,5 +1,5 @@
 name: Oração Automática
-version: "1.2.0"
+version: "1.2.1"
 slug: oracao_automatica
 description: Baixa a oração do Telegram e envia no WhatsApp todos os dias
 arch:

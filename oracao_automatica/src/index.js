@@ -76,8 +76,9 @@ const app = {
 };
 
 function processar(msg, opts) {
-  fila = fila.then(() => tratarAudio(msg, opts)).catch((e) => {
+  fila = fila.then(() => tratarAudio(msg, opts)).catch(async (e) => {
     log('Erro no envio:', e.message);
+    if (opts?.registrar) await avisarVoce('Falha no envio da oração', `⚠️ Não consegui enviar a oração de hoje: ${e.message}. Abra o painel "Oração" no Home Assistant.`);
     ha.notificar(opcoes.servicoNotificacao, 'Oração Automática', `Erro ao enviar a oração: ${e.message}`);
     atualizarSensor('erro', { ultimo_erro: e.message });
   });
@@ -127,6 +128,13 @@ async function tratarAudio(msg, { destinos, registrar = true, dia } = {}) {
       ? `Enviada para ${r.ok.length} de ${destinos.length}. Falhou: ${r.falhas.join(', ')}.`
       : `Oração enviada para ${r.ok.length} destino(s). 🙏`;
     ha.notificar(opcoes.servicoNotificacao, registrar ? 'Oração enviada' : 'Teste da oração', resumo);
+    if (registrar && r.falhas.length) {
+      const detalhes = r.falhas.map((n) => `• ${n}: ${r.erros?.[n] || 'erro desconhecido'}`).join('\n');
+      await avisarVoce('Falha no envio da oração',
+        `⚠️ A oração de ${util.dataBR(hoje)} não chegou em ${r.falhas.length} destino(s):\n${detalhes}\n\nPara reenviar, abra o painel "Oração" e use "Enviar para todos agora".`);
+    } else if (registrar && r.reduzido) {
+      log(`Áudio enviado com qualidade reduzida (${r.reduzido} kbps) por causa do limite de tamanho do WhatsApp.`);
+    }
   } finally {
     enviando = false;
     atualizarSensor();

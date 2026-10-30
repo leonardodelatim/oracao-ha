@@ -144,7 +144,8 @@ function secaoStatus() {
     ? '<span class="selo aviso">● enviando agora...</span>'
     : !pronto ? '<span class="selo aviso">● termine a configuração acima</span>'
       : hoje ? '<span class="selo ok">● oração de hoje enviada</span>'
-        : e.semAudioData === util.hoje() ? `<span class="selo erro">● a oração de hoje não chegou até as ${esc(op.horarioLimite)}</span>`
+        : e.semAudioData === util.hoje() && e.alertaData === util.hoje() ? `<span class="selo erro">● a oração de hoje não chegou até as ${esc(op.horarioLimite)}</span>`
+          : e.semAudioData === util.hoje() ? `<span class="selo ok">● próximo envio amanhã às ${esc(op.horarioEnvio)}</span>`
           : fase === 'janela'
             ? `<span class="selo aviso">● aguardando o áudio de hoje no Telegram${e.alertaData === util.hoje() ? ' (aviso já enviado)' : ` (aviso às ${esc(op.horarioAlerta)})`}</span>`
             : `<span class="selo ok">● próximo envio às ${esc(op.horarioEnvio)}</span>`;

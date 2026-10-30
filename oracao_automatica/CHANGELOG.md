@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.1
+- Se o áudio passar do limite de tamanho do WhatsApp, a qualidade é reduzida automaticamente antes de enviar.
+- Qualquer falha de envio gera um aviso no seu WhatsApp, com o motivo de cada destino.
+- Painel: não mostra mais "não chegou" no dia em que o add-on foi ligado depois do limite.
+
 ## 1.2.0
 - Envio agendado: todo dia às 03:00 (configurável), em vez de enviar assim que o áudio chega.
 - Confere se o áudio é do dia certo: áudios postados a partir das 15:00 contam como a oração do dia seguinte.

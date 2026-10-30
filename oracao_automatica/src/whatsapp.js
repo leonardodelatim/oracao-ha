@@ -117,37 +117,56 @@ async function resolverJid(s, id) {
   throw new Error(`o número ${d} não foi encontrado no WhatsApp`);
 }
 
+// Limite prático do WhatsApp para áudio: ~16 MB. Usamos 15 MB com folga.
+const LIMITE_BYTES = 15 * 1024 * 1024;
+
+function converterOpus(entrada, saida, kbps) {
+  const r = spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', entrada, '-vn', '-ac', '1', '-ar', '48000',
+    '-c:a', 'libopus', '-b:a', `${kbps}k`, '-application', 'voip', saida], { timeout: 300000 });
+  return r.status === 0 && fs.existsSync(saida) ? fs.readFileSync(saida) : null;
+}
+
 // Converte qualquer áudio (m4a, mp3...) para nota de voz do WhatsApp (ogg/opus).
+// Se o resultado passar do limite de tamanho do WhatsApp, reduz a qualidade e tenta de novo.
 // Se a conversão falhar, envia o arquivo original como áudio comum.
 function prepararNotaDeVoz(audio) {
-  if (audio.mime.includes('ogg')) return { buffer: audio.buffer, mimetype: 'audio/ogg; codecs=opus', ptt: true };
+  if (audio.mime.includes('ogg') && audio.buffer.length <= LIMITE_BYTES) {
+    return { buffer: audio.buffer, mimetype: 'audio/ogg; codecs=opus', ptt: true, reduzido: false };
+  }
   const pasta = fs.mkdtempSync(path.join(os.tmpdir(), 'oracao-'));
   const entrada = path.join(pasta, `entrada${audio.ext || '.m4a'}`);
   const saida = path.join(pasta, 'saida.ogg');
   try {
     fs.writeFileSync(entrada, audio.buffer);
-    const r = spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', entrada, '-vn', '-ac', '1', '-ar', '48000',
-      '-c:a', 'libopus', '-b:a', '48k', '-application', 'voip', saida], { timeout: 180000 });
-    if (r.status === 0 && fs.existsSync(saida)) {
-      const buffer = fs.readFileSync(saida);
-      log(`Convertido para nota de voz: ${(buffer.length / 1024).toFixed(0)} KB.`);
-      return { buffer, mimetype: 'audio/ogg; codecs=opus', ptt: true };
+    let kbps = 48;
+    let buffer = converterOpus(entrada, saida, kbps);
+    let reduzido = false;
+    for (let tentativa = 0; buffer && buffer.length > LIMITE_BYTES && tentativa < 3; tentativa++) {
+      // Calcula uma qualidade menor proporcional ao excesso (mínimo 12 kbps, ainda claro para voz).
+      kbps = Math.max(12, Math.floor((kbps * LIMITE_BYTES * 0.9) / buffer.length));
+      log(`Áudio grande demais para o WhatsApp (${(buffer.length / 1048576).toFixed(1)} MB). Reduzindo a qualidade para ${kbps} kbps...`);
+      buffer = converterOpus(entrada, saida, kbps);
+      reduzido = true;
     }
-    log('Não consegui converter para nota de voz; enviando como áudio comum.', String(r.stderr || r.error || '').slice(0, 200));
-  } catch (err) {
-    log('Falha na conversão do áudio:', err.message);
+    if (buffer) {
+      log(`Convertido para nota de voz: ${(buffer.length / 1024).toFixed(0)} KB (${kbps} kbps).`);
+      if (buffer.length > LIMITE_BYTES) throw new Error('mesmo com a qualidade mínima, o áudio passou do limite de tamanho do WhatsApp');
+      return { buffer, mimetype: 'audio/ogg; codecs=opus', ptt: true, reduzido, kbps };
+    }
+    log('Não consegui converter para nota de voz; enviando como áudio comum.');
   } finally {
     try { fs.rmSync(pasta, { recursive: true, force: true }); } catch { /* ignora */ }
   }
+  if (audio.buffer.length > LIMITE_BYTES) throw new Error('o áudio passou do limite de tamanho do WhatsApp e não pôde ser convertido');
   const mimetype = /m4a|mp4|aac/.test(audio.mime) ? 'audio/mp4' : audio.mime;
-  return { buffer: audio.buffer, mimetype, ptt: false };
+  return { buffer: audio.buffer, mimetype, ptt: false, reduzido: false };
 }
 
 // Envia para cada destino, um por vez, com pausa aleatória entre eles:
 // primeiro a mensagem do dia (se houver), depois o áudio, depois a legenda (se houver).
 async function enviarAudio(audio, destinos, { intervalo = { min: 20, max: 60 }, mensagem = '', legenda = '' } = {}) {
   const nota = prepararNotaDeVoz(audio);
-  const resultado = { ok: [], falhas: [] };
+  const resultado = { ok: [], falhas: [], erros: {}, reduzido: nota.reduzido ? nota.kbps : null };
 
   for (let i = 0; i < destinos.length; i++) {
     const d = destinos[i];
@@ -170,6 +189,7 @@ async function enviarAudio(audio, destinos, { intervalo = { min: 20, max: 60 }, 
     } catch (err) {
       log(`  ✘ ${d.nome}: ${err.message}`);
       resultado.falhas.push(d.nome);
+      resultado.erros[d.nome] = err.message;
     }
     if (i < destinos.length - 1) await esperar(aleatorio(intervalo.min, intervalo.max) * 1000);
   }
