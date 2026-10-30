@@ -16,6 +16,18 @@ let sock = null;
 let geracao = 0; // invalida sockets antigos quando reiniciamos
 let aoConectar = () => {};
 let aoDesconectar = () => {};
+let notaAtual = null; // forma de onda e duração da nota de voz sendo enviada
+
+// O iPhone só toca nota de voz que tenha forma de onda. A Baileys apaga a forma de onda
+// quando não consegue gerá-la sozinha, então ela é recolocada aqui, logo antes do envio.
+function completarNotaDeVoz(msg) {
+  const a = msg?.audioMessage || msg?.ephemeralMessage?.message?.audioMessage;
+  if (a && a.ptt && notaAtual) {
+    if (!a.waveform?.length && notaAtual.waveform) a.waveform = notaAtual.waveform;
+    if (!a.seconds && notaAtual.seconds) a.seconds = notaAtual.seconds;
+  }
+  return msg;
+}
 
 async function iniciar(callbacks = {}) {
   if (callbacks.aoConectar) aoConectar = callbacks.aoConectar;
@@ -34,6 +46,7 @@ async function iniciar(callbacks = {}) {
     browser: ['Home Assistant', 'Chrome', '120.0'],
     markOnlineOnConnect: false,
     syncFullHistory: false,
+    patchMessageBeforeSending: (msg) => completarNotaDeVoz(msg),
   });
   const meu = sock;
   meu.ev.on('creds.update', saveCreds);
@@ -121,9 +134,48 @@ async function resolverJid(s, id) {
 const LIMITE_BYTES = 15 * 1024 * 1024;
 
 function converterOpus(entrada, saida, kbps) {
-  const r = spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', entrada, '-vn', '-ac', '1', '-ar', '48000',
-    '-c:a', 'libopus', '-b:a', `${kbps}k`, '-application', 'voip', saida], { timeout: 300000 });
+  const r = spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', entrada, '-vn', '-map_metadata', '-1', '-ac', '1', '-ar', '48000',
+    '-c:a', 'libopus', '-b:a', `${kbps}k`, '-application', 'voip', '-avoid_negative_ts', 'make_zero', saida], { timeout: 300000 });
   return r.status === 0 && fs.existsSync(saida) ? fs.readFileSync(saida) : null;
+}
+
+// Duração em segundos (o iPhone precisa dela na nota de voz).
+function duracaoSegundos(arquivo) {
+  const r = spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', arquivo], { encoding: 'utf8', timeout: 60000 });
+  const s = Math.ceil(Number(String(r.stdout || '').trim()));
+  return Number.isFinite(s) && s > 0 ? s : undefined;
+}
+
+// Forma de onda com 64 barras de 0 a 100, igual à que o próprio WhatsApp gera.
+function formaDeOnda(arquivo) {
+  const r = spawnSync('ffmpeg', ['-v', 'error', '-i', arquivo, '-ac', '1', '-ar', '8000', '-f', 's16le', '-'], { maxBuffer: 256 * 1024 * 1024, timeout: 120000 });
+  if (r.status !== 0 || !r.stdout?.length) return undefined;
+  const amostras = new Int16Array(r.stdout.buffer, r.stdout.byteOffset, Math.floor(r.stdout.length / 2));
+  const barras = 64;
+  const porBarra = Math.max(1, Math.floor(amostras.length / barras));
+  const medias = [];
+  for (let b = 0; b < barras; b++) {
+    let soma = 0;
+    const ini = b * porBarra;
+    const fim = Math.min(amostras.length, ini + porBarra);
+    for (let i = ini; i < fim; i++) soma += Math.abs(amostras[i]);
+    medias.push(fim > ini ? soma / (fim - ini) : 0);
+  }
+  const max = Math.max(...medias) || 1;
+  return new Uint8Array(medias.map((m) => Math.round((m / max) * 100)));
+}
+
+function extrasNotaDeVoz(buffer) {
+  const pasta = fs.mkdtempSync(path.join(os.tmpdir(), 'nota-'));
+  const arq = path.join(pasta, 'nota.ogg');
+  try {
+    fs.writeFileSync(arq, buffer);
+    return { seconds: duracaoSegundos(arq), waveform: formaDeOnda(arq) };
+  } catch {
+    return {};
+  } finally {
+    try { fs.rmSync(pasta, { recursive: true, force: true }); } catch { /* ignora */ }
+  }
 }
 
 // Converte qualquer áudio (m4a, mp3...) para nota de voz do WhatsApp (ogg/opus).
@@ -166,6 +218,8 @@ function prepararNotaDeVoz(audio) {
 // primeiro a mensagem do dia (se houver), depois o áudio, depois a legenda (se houver).
 async function enviarAudio(audio, destinos, { intervalo = { min: 20, max: 60 }, mensagem = '', legenda = '' } = {}) {
   const nota = prepararNotaDeVoz(audio);
+  notaAtual = nota.ptt ? extrasNotaDeVoz(nota.buffer) : null;
+  if (notaAtual) log(`Nota de voz: ${notaAtual.seconds ?? '?'} s, forma de onda ${notaAtual.waveform ? 'ok' : 'indisponível'}.`);
   const resultado = { ok: [], falhas: [], erros: {}, reduzido: nota.reduzido ? nota.kbps : null };
 
   for (let i = 0; i < destinos.length; i++) {
@@ -181,7 +235,12 @@ async function enviarAudio(audio, destinos, { intervalo = { min: 20, max: 60 }, 
       }
       await s.sendPresenceUpdate('recording', jid).catch(() => {});
       await esperar(aleatorio(2000, 5000));
-      await s.sendMessage(jid, { audio: nota.buffer, mimetype: nota.mimetype, ptt: nota.ptt });
+      await s.sendMessage(jid, {
+        audio: nota.buffer,
+        mimetype: nota.mimetype,
+        ptt: nota.ptt,
+        ...(notaAtual?.seconds ? { seconds: notaAtual.seconds } : {}),
+      });
       await s.sendPresenceUpdate('paused', jid).catch(() => {});
       if (legenda) await s.sendMessage(jid, { text: legenda });
       log(`  ✔ ${d.nome}`);

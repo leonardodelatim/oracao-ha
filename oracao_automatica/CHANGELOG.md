@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.2
+
+- Corrige áudio que não abria no iPhone: a nota de voz agora vai com forma de onda e duração, que o WhatsApp do iPhone exige.
+
 ## 1.2.1
 - Se o áudio passar do limite de tamanho do WhatsApp, a qualidade é reduzida automaticamente antes de enviar.
 - Qualquer falha de envio gera um aviso no seu WhatsApp, com o motivo de cada destino.
