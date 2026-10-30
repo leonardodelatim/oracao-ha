@@ -31,7 +31,16 @@ const diaDaSemana = (d = new Date()) => (
     new Intl.DateTimeFormat('en-US', { timeZone: FUSO, weekday: 'short' }).format(d),
   )
 );
-const mensagemDoDia = (op, d = new Date()) => (op.mensagens || [])[diaDaSemana(d)] || '';
+// Aceita Date ou 'AAAA-MM-DD' (meio-dia no fuso do Brasil, para não errar o dia).
+const paraData = (d) => (typeof d === 'string' ? new Date(`${d}T12:00:00-03:00`) : d);
+const mensagemDoDia = (op, d = new Date()) => (op.mensagens || [])[diaDaSemana(paraData(d))] || '';
+const NOMES_DIAS = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+const nomeDoDia = (d) => NOMES_DIAS[diaDaSemana(paraData(d))];
+// Dia a que o áudio se refere: postado a partir de vesperaAPartirDe → oração do dia seguinte.
+function diaDoAudio(op, dataMsg) {
+  const d = dataMsg instanceof Date ? dataMsg : new Date(dataMsg * 1000);
+  return hora(d) >= op.vesperaAPartirDe ? hoje(new Date(d.getTime() + 24 * 3600 * 1000)) : hoje(d);
+}
 const dataBR = (iso) => (iso ? iso.split('-').reverse().join('/') : '—');
 
 function log(...args) {
@@ -63,9 +72,13 @@ function carregarOpcoes() {
   return {
     apiId: Number(o.api_id || 0),
     apiHash: o.api_hash || '',
-    horarioInicio: o.horario_inicio || '00:00',
-    horarioFim: o.horario_fim || '23:59',
-    apenasUmPorDia: o.apenas_um_por_dia !== false,
+    // Agenda diária: envia às horarioEnvio; se o áudio não chegou até horarioAlerta, avisa você;
+    // continua conferindo até horarioLimite. Áudio postado a partir de vesperaAPartirDe conta
+    // como a oração do DIA SEGUINTE (a emissora costuma soltar por volta das 21h da véspera).
+    horarioEnvio: o.horario_envio || '03:00',
+    horarioAlerta: o.horario_alerta || '06:00',
+    horarioLimite: o.horario_limite || o.horario_fim || '12:00',
+    vesperaAPartirDe: o.audio_vespera_a_partir_de || '15:00',
     intervalo: { min, max },
     legenda: (o.legenda || '').trim(),
     // Mensagem enviada ANTES do áudio, uma por dia da semana (0 = domingo).
@@ -94,11 +107,12 @@ function salvarEstado(e) {
   gravarJson(ARQ_ESTADO, e);
 }
 
-function dentroDoHorario(op, d = new Date()) {
+// Em que fase do dia estamos: 'antes' do envio, 'janela' de envio, ou 'depois' do limite.
+function faseDoDia(op, d = new Date()) {
   const h = hora(d);
-  return op.horarioInicio <= op.horarioFim
-    ? h >= op.horarioInicio && h <= op.horarioFim
-    : h >= op.horarioInicio || h <= op.horarioFim; // janela que passa da meia-noite
+  if (h < op.horarioEnvio) return 'antes';
+  if (h > op.horarioLimite) return 'depois';
+  return 'janela';
 }
 
 // "11 98765-4321" → "5511987654321@s.whatsapp.net"
@@ -115,6 +129,6 @@ const aleatorio = (min, max) => Math.floor(min + Math.random() * (max - min + 1)
 module.exports = {
   DADOS, AUDIOS, ARQ_SESSAO_TG, PASTA_SESSAO_WA,
   log, hoje, hora, dataBR, carregarOpcoes, carregarConfig, salvarConfig,
-  carregarEstado, salvarEstado, dentroDoHorario, numeroParaJid, esperar, aleatorio,
-  diaDaSemana, mensagemDoDia,
+  carregarEstado, salvarEstado, faseDoDia, numeroParaJid, esperar, aleatorio,
+  diaDaSemana, mensagemDoDia, nomeDoDia, diaDoAudio,
 };

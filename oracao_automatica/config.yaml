@@ -1,5 +1,5 @@
 name: Oração Automática
-version: "1.1.1"
+version: "1.2.0"
 slug: oracao_automatica
 description: Baixa a oração do Telegram e envia no WhatsApp todos os dias
 arch:
@@ -20,9 +20,10 @@ map:
 options:
   api_id: 0
   api_hash: ""
-  horario_inicio: "04:00"
-  horario_fim: "12:00"
-  apenas_um_por_dia: true
+  horario_envio: "03:00"
+  horario_alerta: "06:00"
+  horario_limite: "12:00"
+  audio_vespera_a_partir_de: "15:00"
   intervalo_min_segundos: 20
   intervalo_max_segundos: 60
   mensagem_segunda: "Bom dia, uma segunda-feira e uma semana abençoada para todos nós! 🙏"
@@ -35,9 +36,13 @@ options:
 schema:
   api_id: int
   api_hash: password
-  horario_inicio: match(^([01][0-9]|2[0-3]):[0-5][0-9]$)
-  horario_fim: match(^([01][0-9]|2[0-3]):[0-5][0-9]$)
-  apenas_um_por_dia: bool
+  horario_envio: match(^([01][0-9]|2[0-3]):[0-5][0-9]$)
+  horario_alerta: match(^([01][0-9]|2[0-3]):[0-5][0-9]$)
+  horario_limite: match(^([01][0-9]|2[0-3]):[0-5][0-9]$)
+  audio_vespera_a_partir_de: match(^([01][0-9]|2[0-3]):[0-5][0-9]$)
+  horario_inicio: str?
+  horario_fim: str?
+  apenas_um_por_dia: bool?
   intervalo_min_segundos: int(5,600)
   intervalo_max_segundos: int(5,1200)
   legenda: str?

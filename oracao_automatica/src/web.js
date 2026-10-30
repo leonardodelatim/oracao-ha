@@ -138,11 +138,16 @@ function secaoStatus() {
   const e = app.estado();
   const pronto = app.tg.conectado() && app.wa.status.conectado && app.chatPronto && app.config().whatsapp.destinos.length;
   const hoje = e.ultimoEnvioData === util.hoje();
+  const op = app.opcoes;
+  const fase = util.faseDoDia(op);
   const situacao = app.enviando
     ? '<span class="selo aviso">● enviando agora...</span>'
     : !pronto ? '<span class="selo aviso">● termine a configuração acima</span>'
       : hoje ? '<span class="selo ok">● oração de hoje enviada</span>'
-        : `<span class="selo ok">● aguardando a oração (${esc(app.opcoes.horarioInicio)}–${esc(app.opcoes.horarioFim)})</span>`;
+        : e.semAudioData === util.hoje() ? `<span class="selo erro">● a oração de hoje não chegou até as ${esc(op.horarioLimite)}</span>`
+          : fase === 'janela'
+            ? `<span class="selo aviso">● aguardando o áudio de hoje no Telegram${e.alertaData === util.hoje() ? ' (aviso já enviado)' : ` (aviso às ${esc(op.horarioAlerta)})`}</span>`
+            : `<span class="selo ok">● próximo envio às ${esc(op.horarioEnvio)}</span>`;
   const hist = (e.historico || []).slice(-7).reverse()
     .map((h) => `<tr><td>${esc(util.dataBR(h.data))} ${esc(h.hora)}</td><td class="ok">${h.ok.length} ok</td><td class="${h.falhas.length ? 'erro' : 'sub'}">${h.falhas.length ? esc(h.falhas.join(', ')) : '—'}</td></tr>`)
     .join('');
@@ -151,6 +156,7 @@ function secaoStatus() {
   const prontoTeste = app.tg.conectado() && app.wa.status.conectado && app.chatPronto && app.config().whatsapp.meuNumero;
   const desabTeste = prontoTeste && !app.enviando ? '' : 'disabled';
   return `<div class="card"><h2>Situação</h2><p>${situacao}</p>
+<p class="sub">Envio diário às ${esc(op.horarioEnvio)} · aviso às ${esc(op.horarioAlerta)} se o áudio não chegar · limite ${esc(op.horarioLimite)} · áudios postados a partir das ${esc(op.vesperaAPartirDe)} valem para o dia seguinte.</p>
 <div class="acoes">
 <form class="inline" method="post" action="acao/teste"><button ${desabTeste}>Testar (só para mim)</button></form>
 <form class="inline" method="post" action="acao/reenviar" onsubmit="return confirm('Enviar o último áudio para TODOS os destinos agora?')"><button class="sec" ${desab}>Enviar para todos agora</button></form>

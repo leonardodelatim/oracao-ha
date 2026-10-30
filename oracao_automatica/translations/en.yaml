@@ -5,15 +5,18 @@ configuration:
   api_hash:
     name: Telegram api_hash
     description: Hash from the same page as api_id.
-  horario_inicio:
-    name: Send from
-    description: HH:MM. Audios arriving earlier are ignored.
-  horario_fim:
-    name: Send until
-    description: HH:MM. Audios arriving later are ignored.
-  apenas_um_por_dia:
-    name: Only one prayer per day
-    description: Send only the first audio of each day.
+  horario_envio:
+    name: Send time
+    description: HH:MM. Every day at this time the prayer is sent to the destinations.
+  horario_alerta:
+    name: Alert time
+    description: If the audio has not arrived on Telegram by this time, you get a WhatsApp alert.
+  horario_limite:
+    name: Deadline
+    description: After the alert, keep checking until this time and send if the audio arrives.
+  audio_vespera_a_partir_de:
+    name: Previous-day audio from
+    description: Audio posted from this time on counts as the next day's prayer.
   intervalo_min_segundos:
     name: Minimum pause between sends (seconds)
     description: Larger pauses lower the risk of a WhatsApp ban.

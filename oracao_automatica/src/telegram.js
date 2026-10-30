@@ -117,6 +117,12 @@ async function buscarUltimoAudio(entidade, limite = 30) {
   return msgs.find(ehAudio) || null;
 }
 
+// Todos os áudios recentes do chat, do mais novo para o mais antigo.
+async function buscarAudios(entidade, limite = 40) {
+  const msgs = await client.getMessages(entidade, { limit: limite });
+  return msgs.filter(ehAudio);
+}
+
 // Um único ouvinte; quem decide se a mensagem é do chat certo é obterPeerId() (o chat pode mudar pelo painel).
 function aoChegarAudio(obterPeerId, callback) {
   client.addEventHandler(async (evento) => {
@@ -132,6 +138,6 @@ function aoChegarAudio(obterPeerId, callback) {
 
 module.exports = {
   status, iniciar, sair, fornecerEntrada, listarChats, resolverChat,
-  ehAudio, baixarAudio, buscarUltimoAudio, aoChegarAudio,
+  ehAudio, baixarAudio, buscarUltimoAudio, buscarAudios, aoChegarAudio,
   conectado: () => status.etapa === 'conectado' && client !== null,
 };

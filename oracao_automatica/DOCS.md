@@ -29,8 +29,10 @@ Pronto. A partir de amanhã o envio é automático. Cada áudio também fica sal
 
 | Opção | O que faz |
 |---|---|
-| Enviar a partir de / até | só envia dentro dessa janela de horário |
-| Apenas uma oração por dia | ignora outros áudios depois do primeiro do dia |
+| Horário do envio | todo dia, neste horário (padrão **03:00**), a oração do dia é enviada para os destinos |
+| Horário do aviso | se até este horário (padrão **06:00**) o áudio do dia não chegou no Telegram, você recebe um aviso no seu WhatsApp |
+| Horário limite | depois do aviso, continua conferindo até este horário (padrão **12:00**) e envia se o áudio chegar; você recebe outro aviso nos dois casos |
+| Áudio da véspera a partir de | áudios postados a partir deste horário (padrão **15:00**) contam como a oração do **dia seguinte**; a emissora costuma postar por volta das 21h |
 | Pausa mínima / máxima | intervalo sorteado entre um envio e outro; valores maiores são mais seguros |
 | Mensagem de segunda … domingo | texto enviado **antes** do áudio, um para cada dia da semana. Já vem preenchido (ex.: "Bom dia, uma segunda-feira e uma semana abençoada para todos nós! 🙏"); apague o texto de um dia para mandar só o áudio |
 | Mensagem depois do áudio | texto opcional enviado depois do áudio |

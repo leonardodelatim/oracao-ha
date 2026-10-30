@@ -176,9 +176,16 @@ async function enviarAudio(audio, destinos, { intervalo = { min: 20, max: 60 }, 
   return resultado;
 }
 
+// Mensagem de texto simples (usada para avisar você quando o áudio não chegou).
+async function enviarTexto(id, texto) {
+  const s = await aguardarConexao(30);
+  const jid = await resolverJid(s, id);
+  await s.sendMessage(jid, { text: texto });
+}
+
 function encerrar() {
   geracao++;
   try { sock?.end(undefined); } catch { /* ignora */ }
 }
 
-module.exports = { status, iniciar, sair, listarGrupos, enviarAudio, encerrar };
+module.exports = { status, iniciar, sair, listarGrupos, enviarAudio, enviarTexto, encerrar };

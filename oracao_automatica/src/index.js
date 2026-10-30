@@ -70,7 +70,8 @@ const app = {
     if (!destinos.length) throw new Error('Nenhum destino cadastrado.');
     const msg = await tg.buscarUltimoAudio(chatAtual.entidade);
     if (!msg) throw new Error('Não encontrei nenhum áudio recente no chat.');
-    processar(msg, { forcar: true, destinos, registrar: modo !== 'teste' });
+    const dia = util.diaDoAudio(opcoes, msg.date);
+    processar(msg, { destinos, registrar: modo !== 'teste', dia });
   },
 };
 
@@ -83,26 +84,14 @@ function processar(msg, opts) {
   return fila;
 }
 
-async function tratarAudio(msg, { forcar = false, destinos, registrar = true } = {}) {
+async function tratarAudio(msg, { destinos, registrar = true, dia } = {}) {
   const cfg = util.carregarConfig();
   destinos = destinos || cfg.whatsapp.destinos;
   const estado = util.carregarEstado();
-  const hoje = util.hoje();
-
-  if (!forcar) {
-    if (estado.ultimaMensagemId && msg.id <= estado.ultimaMensagemId) return;
-    if (opcoes.apenasUmPorDia && estado.ultimoEnvioData === hoje) {
-      log(`Áudio ${msg.id} ignorado: a oração de hoje já foi enviada.`);
-      return;
-    }
-    if (!util.dentroDoHorario(opcoes)) {
-      log(`Áudio ${msg.id} ignorado: fora do horário (${opcoes.horarioInicio}–${opcoes.horarioFim}).`);
-      return;
-    }
-    if (!destinos.length) {
-      log('Chegou áudio, mas não há destinos cadastrados.');
-      return;
-    }
+  const hoje = dia || util.diaDoAudio(opcoes, msg.date);
+  if (!destinos.length) {
+    log('Áudio disponível, mas não há destinos cadastrados.');
+    return;
   }
 
   enviando = true;
@@ -124,7 +113,7 @@ async function tratarAudio(msg, { forcar = false, destinos, registrar = true } =
       util.salvarEstado(estado);
     }
 
-    const mensagem = util.mensagemDoDia(opcoes);
+    const mensagem = util.mensagemDoDia(opcoes, hoje);
     log(`Enviando para ${destinos.length} destino(s)${mensagem ? ` com a mensagem: "${mensagem}"` : ''}...`);
     const r = await wa.enviarAudio(audio, destinos, { intervalo: opcoes.intervalo, mensagem, legenda: opcoes.legenda });
     log(`Concluído: ${r.ok.length} ok, ${r.falhas.length} falha(s).`);
@@ -151,21 +140,90 @@ async function prepararChat() {
   try {
     chatAtual = await tg.resolverChat(cfg.telegram.chat);
     log(`Monitorando o chat: ${cfg.telegram.chatNome || cfg.telegram.chat}`);
-    await conferir();
+    log(`Agenda: envio às ${opcoes.horarioEnvio}, aviso às ${opcoes.horarioAlerta} se o áudio não chegar, limite às ${opcoes.horarioLimite}. `
+      + `Áudios postados a partir das ${opcoes.vesperaAPartirDe} valem para o dia seguinte.`);
+    buscarJa = true;
+    await ciclo();
   } catch (err) {
     log('Não consegui abrir o chat escolhido:', err.message);
   }
 }
 
-// Rede de segurança: confere se a oração de hoje já foi enviada.
-async function conferir() {
-  atualizarSensor();
-  if (!tg.conectado() || !chatAtual || !wa.status.conectado) return;
+// ---------- Ciclo diário ----------
+// A cada minuto: na janela de envio (horarioEnvio → horarioLimite), procura o áudio do dia
+// e envia; se até horarioAlerta ele não apareceu, avisa você no WhatsApp; se o limite passar
+// sem áudio, avisa de novo e encerra o dia.
+let ultimaBusca = 0;
+let buscarJa = true;
+let cicloRodando = false;
+
+async function audioDoDia(dia) {
+  const agora = Date.now();
+  if (!buscarJa && agora - ultimaBusca < CONFERIR_A_CADA_MIN * 60 * 1000) return null;
+  buscarJa = false;
+  ultimaBusca = agora;
+  const audios = await tg.buscarAudios(chatAtual.entidade);
+  return audios.find((m) => util.diaDoAudio(opcoes, m.date) === dia) || null;
+}
+
+async function avisarVoce(titulo, texto) {
+  log(texto);
+  ha.notificar(opcoes.servicoNotificacao, titulo, texto);
+  const meu = util.numeroParaJid(util.carregarConfig().whatsapp.meuNumero);
+  if (!meu) return;
   try {
-    const msg = await tg.buscarUltimoAudio(chatAtual.entidade);
-    if (msg && util.hoje(new Date(msg.date * 1000)) === util.hoje()) await processar(msg);
+    await wa.enviarTexto(meu, texto);
   } catch (err) {
-    log('Falha na conferência:', err.message);
+    log('Não consegui enviar o aviso no WhatsApp:', err.message);
+  }
+}
+
+async function ciclo() {
+  atualizarSensor();
+  if (cicloRodando || enviando || !tg.conectado() || !chatAtual || !wa.status.conectado) return;
+  cicloRodando = true;
+  try {
+    const dia = util.hoje();
+    const hora = util.hora();
+    const e = util.carregarEstado();
+    if (e.ultimoEnvioData === dia || e.semAudioData === dia) return;
+    const fase = util.faseDoDia(opcoes);
+    const quando = `${util.nomeDoDia(dia)}, ${util.dataBR(dia)}`;
+
+    if (fase === 'depois') {
+      // Só avisa se o dia estava sendo acompanhado (o aviso das 06:00 saiu). Ligar o add-on
+      // depois do limite não gera aviso falso.
+      e.semAudioData = dia;
+      util.salvarEstado(e);
+      if (e.alertaData !== dia) return;
+      await avisarVoce('Oração não enviada',
+        `⚠️ A oração de hoje (${quando}) não foi disponibilizada no Telegram até as ${opcoes.horarioLimite}. Nada foi enviado hoje.`);
+      return;
+    }
+    if (fase !== 'janela') return;
+
+    const msg = await audioDoDia(dia);
+    if (msg) {
+      const atrasada = e.alertaData === dia;
+      await processar(msg, { registrar: true, dia });
+      if (atrasada) {
+        await avisarVoce('Oração enviada com atraso',
+          `✅ A oração de hoje (${quando}) chegou às ${hora} e já foi enviada para os destinos.`);
+      }
+      return;
+    }
+    if (hora >= opcoes.horarioAlerta && e.alertaData !== dia) {
+      e.alertaData = dia;
+      util.salvarEstado(e);
+      await avisarVoce('Oração ainda não disponível',
+        `⚠️ A oração de hoje (${quando}) ainda não foi disponibilizada no Telegram até as ${opcoes.horarioAlerta}. `
+        + `Vou continuar conferindo até as ${opcoes.horarioLimite} e envio automaticamente se ela chegar.`);
+    }
+  } catch (err) {
+    log('Falha no ciclo diário:', err.message);
+  } finally {
+    cicloRodando = false;
+    atualizarSensor();
   }
 }
 
@@ -173,7 +231,11 @@ async function iniciarTelegram(telefone) {
   const client = await tg.iniciar(opcoes, telefone);
   atualizarSensor();
   if (!client) return;
-  tg.aoChegarAudio(() => chatAtual?.peerId, (msg) => processar(msg));
+  tg.aoChegarAudio(() => chatAtual?.peerId, (msg) => {
+    log(`Áudio novo no chat (mensagem ${msg.id}), referente a ${util.dataBR(util.diaDoAudio(opcoes, msg.date))}.`);
+    buscarJa = true;
+    return ciclo();
+  });
   await prepararChat();
 }
 
@@ -186,6 +248,8 @@ function atualizarSensor(estadoForcado, extra = {}) {
     if (enviando) estado = 'enviando';
     else if (!tg.conectado() || !wa.status.conectado || !chatAtual) estado = 'configurar';
     else if (e.ultimoEnvioData === util.hoje()) estado = 'enviada_hoje';
+    else if (e.semAudioData === util.hoje()) estado = 'sem_audio';
+    else if (util.faseDoDia(opcoes) === 'janela') estado = 'aguardando_audio';
     else estado = 'aguardando';
   }
   return ha.atualizarSensor(estado, {
@@ -205,7 +269,7 @@ async function principal() {
   log('Oração Automática iniciando...');
   web.iniciar(app);
   wa.iniciar({
-    aoConectar: () => { atualizarSensor(); conferir(); },
+    aoConectar: () => { atualizarSensor(); ciclo(); },
     aoDesconectar: (motivo) => {
       atualizarSensor();
       ha.notificar(opcoes.servicoNotificacao, 'Oração Automática', `${motivo} Abra o painel "Oração" no Home Assistant.`);
@@ -213,7 +277,7 @@ async function principal() {
   });
   const cfg = util.carregarConfig();
   iniciarTelegram(cfg.telegram.telefone).catch((err) => log('Telegram:', err.message));
-  setInterval(conferir, CONFERIR_A_CADA_MIN * 60 * 1000);
+  setInterval(ciclo, 60 * 1000);
 }
 
 const desligar = () => { wa.encerrar(); process.exit(0); };

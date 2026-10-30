@@ -5,15 +5,18 @@ configuration:
   api_hash:
     name: Telegram api_hash
     description: Texto obtido no mesmo lugar do api_id.
-  horario_inicio:
-    name: Enviar a partir de
-    description: Formato HH:MM. Áudios que chegarem antes disso são ignorados.
-  horario_fim:
-    name: Enviar até
-    description: Formato HH:MM. Áudios que chegarem depois disso são ignorados.
-  apenas_um_por_dia:
-    name: Apenas uma oração por dia
-    description: Envia só o primeiro áudio do dia.
+  horario_envio:
+    name: Horário do envio
+    description: Formato HH:MM. Todo dia, neste horário, a oração do dia é enviada para os destinos.
+  horario_alerta:
+    name: Horário do aviso
+    description: Se até este horário o áudio do dia não chegou no Telegram, você recebe um aviso no seu WhatsApp.
+  horario_limite:
+    name: Horário limite
+    description: Depois do aviso, continua conferindo até este horário e envia se o áudio chegar. Passou disso, o dia é encerrado sem envio.
+  audio_vespera_a_partir_de:
+    name: Áudio da véspera a partir de
+    description: Áudios postados a partir deste horário contam como a oração do dia seguinte (a emissora costuma postar por volta das 21h).
   intervalo_min_segundos:
     name: Pausa mínima entre envios (segundos)
     description: Quanto maior, menor o risco de bloqueio no WhatsApp.
