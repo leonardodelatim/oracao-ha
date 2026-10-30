@@ -147,9 +147,12 @@ function secaoStatus() {
     .map((h) => `<tr><td>${esc(util.dataBR(h.data))} ${esc(h.hora)}</td><td class="ok">${h.ok.length} ok</td><td class="${h.falhas.length ? 'erro' : 'sub'}">${h.falhas.length ? esc(h.falhas.join(', ')) : '—'}</td></tr>`)
     .join('');
   const desab = pronto && !app.enviando ? '' : 'disabled';
+  // O teste só precisa do Telegram, do WhatsApp, do chat e do seu número (não depende dos destinos).
+  const prontoTeste = app.tg.conectado() && app.wa.status.conectado && app.chatPronto && app.config().whatsapp.meuNumero;
+  const desabTeste = prontoTeste && !app.enviando ? '' : 'disabled';
   return `<div class="card"><h2>Situação</h2><p>${situacao}</p>
 <div class="acoes">
-<form class="inline" method="post" action="acao/teste"><button ${desab}>Testar (só para mim)</button></form>
+<form class="inline" method="post" action="acao/teste"><button ${desabTeste}>Testar (só para mim)</button></form>
 <form class="inline" method="post" action="acao/reenviar" onsubmit="return confirm('Enviar o último áudio para TODOS os destinos agora?')"><button class="sec" ${desab}>Enviar para todos agora</button></form>
 ${!hoje && pronto ? `<form class="inline" method="post" action="acao/marcar-hoje"><button class="sec">Já enviei hoje à mão</button></form>` : ''}
 </div>

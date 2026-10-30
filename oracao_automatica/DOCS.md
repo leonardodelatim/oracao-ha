@@ -32,7 +32,8 @@ Pronto. A partir de amanhã o envio é automático. Cada áudio também fica sal
 | Enviar a partir de / até | só envia dentro dessa janela de horário |
 | Apenas uma oração por dia | ignora outros áudios depois do primeiro do dia |
 | Pausa mínima / máxima | intervalo sorteado entre um envio e outro; valores maiores são mais seguros |
-| Mensagem depois do áudio | texto opcional, por exemplo "Bom dia! 🙏" |
+| Mensagem de segunda … domingo | texto enviado **antes** do áudio, um para cada dia da semana. Já vem preenchido (ex.: "Bom dia, uma segunda-feira e uma semana abençoada para todos nós! 🙏"); apague o texto de um dia para mandar só o áudio |
+| Mensagem depois do áudio | texto opcional enviado depois do áudio |
 | Serviço de notificação | por exemplo `notify.mobile_app_meu_celular`; avisa no celular quando enviar, se der erro ou se o WhatsApp desconectar |
 
 ## Usar em automações e no painel

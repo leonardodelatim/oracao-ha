@@ -124,8 +124,9 @@ async function tratarAudio(msg, { forcar = false, destinos, registrar = true } =
       util.salvarEstado(estado);
     }
 
-    log(`Enviando para ${destinos.length} destino(s)...`);
-    const r = await wa.enviarAudio(audio, destinos, { intervalo: opcoes.intervalo, legenda: opcoes.legenda });
+    const mensagem = util.mensagemDoDia(opcoes);
+    log(`Enviando para ${destinos.length} destino(s)${mensagem ? ` com a mensagem: "${mensagem}"` : ''}...`);
+    const r = await wa.enviarAudio(audio, destinos, { intervalo: opcoes.intervalo, mensagem, legenda: opcoes.legenda });
     log(`Concluído: ${r.ok.length} ok, ${r.falhas.length} falha(s).`);
 
     if (registrar) {

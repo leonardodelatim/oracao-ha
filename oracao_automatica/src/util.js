@@ -25,6 +25,13 @@ function partes(data = new Date()) {
 }
 const hoje = (d) => { const p = partes(d); return `${p.year}-${p.month}-${p.day}`; };
 const hora = (d) => { const p = partes(d); return `${p.hour}:${p.minute}`; };
+// 0 = domingo ... 6 = sábado, no fuso do Brasil
+const diaDaSemana = (d = new Date()) => (
+  ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(
+    new Intl.DateTimeFormat('en-US', { timeZone: FUSO, weekday: 'short' }).format(d),
+  )
+);
+const mensagemDoDia = (op, d = new Date()) => (op.mensagens || [])[diaDaSemana(d)] || '';
 const dataBR = (iso) => (iso ? iso.split('-').reverse().join('/') : '—');
 
 function log(...args) {
@@ -39,6 +46,16 @@ function gravarJson(arq, obj) {
   fs.writeFileSync(arq, JSON.stringify(obj, null, 2));
 }
 
+const MENSAGENS_PADRAO = {
+  segunda: 'Bom dia, uma segunda-feira e uma semana abençoada para todos nós! 🙏',
+  terca: 'Bom dia, uma terça-feira abençoada para todos nós! 🙏',
+  quarta: 'Bom dia, uma quarta-feira abençoada para todos nós! 🙏',
+  quinta: 'Bom dia, uma quinta-feira abençoada para todos nós! 🙏',
+  sexta: 'Bom dia, uma sexta-feira abençoada e um ótimo fim de semana para todos nós! 🙏',
+  sabado: 'Bom dia, um sábado abençoado para todos nós! 🙏',
+  domingo: 'Bom dia, um domingo abençoado para todos nós! 🙏',
+};
+
 function carregarOpcoes() {
   const o = lerJson(ARQ_OPCOES, {});
   const min = Number(o.intervalo_min_segundos ?? 20);
@@ -51,6 +68,11 @@ function carregarOpcoes() {
     apenasUmPorDia: o.apenas_um_por_dia !== false,
     intervalo: { min, max },
     legenda: (o.legenda || '').trim(),
+    // Mensagem enviada ANTES do áudio, uma por dia da semana (0 = domingo).
+    // Se a opção ainda não existe (instalação anterior à 1.1.0), usa o texto padrão;
+    // se você apagar o texto, nada é enviado antes do áudio naquele dia.
+    mensagens: ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado']
+      .map((dia) => (o[`mensagem_${dia}`] ?? MENSAGENS_PADRAO[dia] ?? '').trim()),
     servicoNotificacao: (o.servico_notificacao || '').trim().replace(/^notify\./, ''),
   };
 }
@@ -94,4 +116,5 @@ module.exports = {
   DADOS, AUDIOS, ARQ_SESSAO_TG, PASTA_SESSAO_WA,
   log, hoje, hora, dataBR, carregarOpcoes, carregarConfig, salvarConfig,
   carregarEstado, salvarEstado, dentroDoHorario, numeroParaJid, esperar, aleatorio,
+  diaDaSemana, mensagemDoDia,
 };

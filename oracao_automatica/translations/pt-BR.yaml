@@ -23,6 +23,27 @@ configuration:
   legenda:
     name: Mensagem depois do áudio
     description: Texto opcional enviado logo após o áudio, por exemplo "Bom dia! 🙏".
+  mensagem_segunda:
+    name: Mensagem de segunda-feira
+    description: Texto enviado ANTES do áudio na segunda-feira. Deixe em branco para enviar só o áudio.
+  mensagem_terca:
+    name: Mensagem de terça-feira
+    description: Texto enviado ANTES do áudio na terça-feira. Deixe em branco para enviar só o áudio.
+  mensagem_quarta:
+    name: Mensagem de quarta-feira
+    description: Texto enviado ANTES do áudio na quarta-feira. Deixe em branco para enviar só o áudio.
+  mensagem_quinta:
+    name: Mensagem de quinta-feira
+    description: Texto enviado ANTES do áudio na quinta-feira. Deixe em branco para enviar só o áudio.
+  mensagem_sexta:
+    name: Mensagem de sexta-feira
+    description: Texto enviado ANTES do áudio na sexta-feira. Deixe em branco para enviar só o áudio.
+  mensagem_sabado:
+    name: Mensagem de sábado
+    description: Texto enviado ANTES do áudio no sábado. Deixe em branco para enviar só o áudio.
+  mensagem_domingo:
+    name: Mensagem de domingo
+    description: Texto enviado ANTES do áudio no domingo. Deixe em branco para enviar só o áudio.
   servico_notificacao:
     name: Serviço de notificação
     description: Opcional. Ex. notify.mobile_app_meu_celular — avisa quando enviar ou se der problema.

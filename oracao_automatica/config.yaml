@@ -1,5 +1,5 @@
 name: Oração Automática
-version: "1.0.0"
+version: "1.1.0"
 slug: oracao_automatica
 description: Baixa a oração do Telegram e envia no WhatsApp todos os dias
 arch:
@@ -25,6 +25,13 @@ options:
   apenas_um_por_dia: true
   intervalo_min_segundos: 20
   intervalo_max_segundos: 60
+  mensagem_segunda: "Bom dia, uma segunda-feira e uma semana abençoada para todos nós! 🙏"
+  mensagem_terca: "Bom dia, uma terça-feira abençoada para todos nós! 🙏"
+  mensagem_quarta: "Bom dia, uma quarta-feira abençoada para todos nós! 🙏"
+  mensagem_quinta: "Bom dia, uma quinta-feira abençoada para todos nós! 🙏"
+  mensagem_sexta: "Bom dia, uma sexta-feira abençoada e um ótimo fim de semana para todos nós! 🙏"
+  mensagem_sabado: "Bom dia, um sábado abençoado para todos nós! 🙏"
+  mensagem_domingo: "Bom dia, um domingo abençoado para todos nós! 🙏"
 schema:
   api_id: int
   api_hash: password
@@ -34,4 +41,11 @@ schema:
   intervalo_min_segundos: int(5,600)
   intervalo_max_segundos: int(5,1200)
   legenda: str?
+  mensagem_segunda: str?
+  mensagem_terca: str?
+  mensagem_quarta: str?
+  mensagem_quinta: str?
+  mensagem_sexta: str?
+  mensagem_sabado: str?
+  mensagem_domingo: str?
   servico_notificacao: str?

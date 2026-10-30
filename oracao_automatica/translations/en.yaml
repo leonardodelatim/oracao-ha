@@ -23,6 +23,27 @@ configuration:
   legenda:
     name: Message after the audio
     description: Optional text sent right after the audio.
+  mensagem_segunda:
+    name: Monday message
+    description: Text sent BEFORE the audio on Monday. Leave empty to send only the audio.
+  mensagem_terca:
+    name: Tuesday message
+    description: Text sent BEFORE the audio on Tuesday. Leave empty to send only the audio.
+  mensagem_quarta:
+    name: Wednesday message
+    description: Text sent BEFORE the audio on Wednesday. Leave empty to send only the audio.
+  mensagem_quinta:
+    name: Thursday message
+    description: Text sent BEFORE the audio on Thursday. Leave empty to send only the audio.
+  mensagem_sexta:
+    name: Friday message
+    description: Text sent BEFORE the audio on Friday. Leave empty to send only the audio.
+  mensagem_sabado:
+    name: Saturday message
+    description: Text sent BEFORE the audio on Saturday. Leave empty to send only the audio.
+  mensagem_domingo:
+    name: Sunday message
+    description: Text sent BEFORE the audio on Sunday. Leave empty to send only the audio.
   servico_notificacao:
     name: Notification service
     description: Optional, e.g. notify.mobile_app_my_phone.
